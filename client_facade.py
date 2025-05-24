@@ -9,6 +9,8 @@ from telethon.errors import (
 
 SESSION_FILE = 'test.session'
 
+# Класс-фасад для работы с API telegram
+
 class ClientFacade:
     def __init__(self):
         self.client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -28,12 +30,12 @@ class ClientFacade:
         await self.client.disconnect()
 
     async def login(self, phone):
-        if not phone or not isinstance(phone, str) or phone.strip() == "":
+        if not phone or not isinstance(phone, str) or phone.strip() == "": # Проверка правильности ввода
             print("[!] Номер телефона не может быть пустым.")
             return False
 
         try:
-            await self.client.send_code_request(phone)
+            await self.client.send_code_request(phone) # Запрос на отправку кода подтверждения
             code = input("[?] Введите код подтверждения: ")
             self.me = await self.client.sign_in(phone, code)
         except PhoneNumberInvalidError:
