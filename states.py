@@ -10,25 +10,30 @@ class BaseState(ABC):
     def __init__(self, cli):
         self.cli = cli
         self.facade = cli.client_facade
-        self.commands = {}
-        self.command_descriptions = {}
+        self.commands = {
+            "/help": "Показать список команд"
+        }
+        # self.command_descriptions = {}
 
         # Автоматическая регистрация команд
-        for attr in dir(self):
-            method = getattr(self, attr)
-            if callable(method) and hasattr(method, "_command_name"):
-                name = method._command_name
-                desc = getattr(method, "_command_description", "")
-                self.commands[name] = method
-                self.command_descriptions[name] = desc
+        # for attr in dir(self):
+        #     method = getattr(self, attr)
+        #     if callable(method) and hasattr(method, "_command_name"):
+        #         name = method._command_name
+        #         desc = getattr(method, "_command_description", "")
+        #         self.commands[name] = method
+        #         self.command_descriptions[name] = desc
 
+    # async def handle_command(self, command: str):
+    #     name = command.split()[0]
+    #     handler = self.commands.get(name)
+    #     if handler:
+    #         await handler(command)
+    #     else:
+    #         print(f"[!] Неизвестная команда: {name}")
+    @abstractmethod
     async def handle_command(self, command: str):
-        name = command.split()[0]
-        handler = self.commands.get(name)
-        if handler:
-            await handler(command)
-        else:
-            print(f"[!] Неизвестная команда: {name}")
+        pass
 
     @abstractmethod
     async def enter(self):
@@ -63,72 +68,74 @@ class MainMenuState(BaseState):
         super().__init__(cli)
         self.dialogs = self.cli.dialogs_cache
 
-    # commands = {
-    #     "/help": "Показать список команд",
-    #     "/list": "показать первые 10 чатов",
-    #     "/list a b": "показать чаты с индекса a по b",
-    #     "/enter ": "войти в чат по номеру из списка",
-    #     "/enter_name ": "Войти в чат по части имени",
-    #     "/enter_phone ": "Войти в чат по части номера телефона",
-    #     "/logout": "Выйти из аккаунта Telegram",
-    #     "/exit": "Завершить работу клиента"
-    # }
+        self.commands = {
+            "/help": "Показать список команд",
+            "/list": "показать первые 10 чатов",
+            "/list a b": "показать чаты с индекса a по b",
+            "/enter ": "войти в чат по номеру из списка",
+            "/enter_name ": "Войти в чат по части имени",
+            "/enter_phone ": "Войти в чат по части номера телефона",
+            "/logout": "Выйти из аккаунта Telegram",
+            "/exit": "Завершить работу клиента"
+        }
 
     async def enter(self):
         print("=== Главное меню ===")
-        print("[*] Доступные команды: ")
-        for name in self.commands:
-            print(f"  {name}")
+        print("[*] Для просмотра доступных команд введите /help")
 
-    @command("/help", description="Вывести список команд")
-    async def cmd_help(self, _):
-        print("[*] Команды:")
-        for name, desc in self.command_descriptions.items():
-            print(f"  {name:<10} — {desc}")
-
-    @command("/list", description="Показать список чатов (по умолчанию первые 10)")
-    async def cmd_list(self, command):
-        parts = command.split()
-        try:
-            self.cli.dialogs_cache = await self.facade.list_dialogs()
-            print("[*] Список чатов обновлён.")
-            self.dialogs = self.cli.dialogs_cache
-            dialogs = self.cli.dialogs_cache[:10]
-        except Exception as e:
-            print(f"[!] Ошибка при получении чатов: {e}")
-
-    @command("/list a b", description="Показать диапазон чатов по номерам с a по b")
-    async def cmd_list(self, command):
-        parts = command.split()
-        try:
-            a = int(parts[1]) if len(parts) > 1 else 1
-            b = int(parts[2]) if len(parts) > 2 else a + 9
-            if a < 1 or b < a:
-                raise ValueError
-            dialogs = self.cli.dialogs_cache[a - 1:b]
-
-            if not dialogs:
-                print("[*] Нет чатов в этом диапазоне.")
-            else:
-                for i, d in enumerate(dialogs, start=1):
-                    print(f"{i}: {d.name}")
-        except ValueError:
-            print("[!] Неверный формат. Используйте: /list или /list a b")
-        except Exception as e:
-            print(f"[!] Ошибка при получении чатов: {e}")
-
-    @command("enter", description="Войти в чат по номеру из списка")
-    async def cmd_enter(self, command):
-        parts = command.split()
-        try:
-            index = int(parts[1]) - 1
-            dialog = self.dialogs[index]
-            await self.cli.change_state(ChatState, dialog)
-        except (IndexError, ValueError, AttributeError):
-            print("[!] Неверный индекс. Используйте list сначала.")
+    # @command("/help", description="Вывести список команд")
+    # async def cmd_help(self, _):
+    #     print("[*] Команды:")
+    #     for name, desc in self.command_descriptions.items():
+    #         print(f"  {name:<10} — {desc}")
 
     async def handle_command(self, command: str):
-        if command.startswith("/enter_name "):
+        if command.startswith("/help"):
+            print("[*] Команды:")
+            for name, desc in self.commands.items():
+                print(f"  {name:<10} — {desc}")
+        elif command.startswith("/list"):
+            parts = command.split()
+
+            try:
+                # list без параметров → обновление списка
+                if len(parts) == 1:
+                    self.cli.dialogs_cache = await self.facade.list_dialogs()
+                    print("[*] Список чатов обновлён.")
+
+                dialogs = self.cli.dialogs_cache
+                if not dialogs:
+                    print("[!] Выполните '/list' для обновления списка диалогов.")
+                    return
+
+                a = int(parts[1]) if len(parts) > 1 else 1
+                b = int(parts[2]) if len(parts) > 2 else a + 9
+                if a < 1 or b < a:
+                    raise ValueError
+
+                slice_ = dialogs[a - 1:b]
+                self.dialogs = dialogs
+
+                if not slice_:
+                    print("[*] Нет чатов в этом диапазоне.")
+                else:
+                    for idx, d in enumerate(slice_, start=a):
+                        print(f"{idx}: {d.name}")
+
+            except ValueError:
+                print("[!] Неверный формат. Используй: list или list a b")
+            except Exception as e:
+                print(f"[!] Ошибка при получении чатов: {e}")
+
+        elif command.startswith("/enter "):
+            try:
+                index = int(command.split()[1]) - 1
+                dialog = self.dialogs[index]
+                await self.cli.change_state(ChatState, dialog)
+            except (IndexError, ValueError, AttributeError):
+                print("[!] Неверный индекс чата. Сначала выполните list.")
+
+        elif command.startswith("/enter_name "):
             name_query = command[len("enter_name "):].strip().lower()
 
             matching = [
