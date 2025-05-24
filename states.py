@@ -34,6 +34,16 @@ class BaseState(ABC):
     async def enter(self):
         pass
 
+    @command("/help", description="Вывести список команд")
+    async def cmd_help(self, _):
+        print("[*] Доступные команды:")
+        for name, desc in self.command_descriptions.items():
+            print(f"  {name:<15} — {desc}")
+
+    @command("/exit", description="Завершить работу клиента")
+    async def cmd_exit(self, _):
+        raise SystemExit
+
 
 class UnauthenticatedState(BaseState):
     async def enter(self):
@@ -63,49 +73,26 @@ class MainMenuState(BaseState):
         super().__init__(cli)
         self.dialogs = self.cli.dialogs_cache
 
-    # commands = {
-    #     "/help": "Показать список команд",
-    #     "/list": "показать первые 10 чатов",
-    #     "/list a b": "показать чаты с индекса a по b",
-    #     "/enter ": "войти в чат по номеру из списка",
-    #     "/enter_name ": "Войти в чат по части имени",
-    #     "/enter_phone ": "Войти в чат по части номера телефона",
-    #     "/logout": "Выйти из аккаунта Telegram",
-    #     "/exit": "Завершить работу клиента"
-    # }
-
     async def enter(self):
         print("=== Главное меню ===")
-        print("[*] Доступные команды: ")
-        for name in self.commands:
-            print(f"  {name}")
+        print("[*] Для вывода списка доступных команд введите /help")
 
-    @command("/help", description="Вывести список команд")
-    async def cmd_help(self, _):
-        print("[*] Команды:")
-        for name, desc in self.command_descriptions.items():
-            print(f"  {name:<10} — {desc}")
-
-    @command("/list", description="Показать список чатов (по умолчанию первые 10)")
+    @command("/list", description="Показать список чатов (по умолчанию первые 10). "
+                                  "Добавьте параметры a, b через пробел для вывода диапазона чатов по номеру с a по b")
     async def cmd_list(self, command):
         parts = command.split()
         try:
-            self.cli.dialogs_cache = await self.facade.list_dialogs()
-            print("[*] Список чатов обновлён.")
-            self.dialogs = self.cli.dialogs_cache
-            dialogs = self.cli.dialogs_cache[:10]
-        except Exception as e:
-            print(f"[!] Ошибка при получении чатов: {e}")
-
-    @command("/list a b", description="Показать диапазон чатов по номерам с a по b")
-    async def cmd_list(self, command):
-        parts = command.split()
-        try:
-            a = int(parts[1]) if len(parts) > 1 else 1
-            b = int(parts[2]) if len(parts) > 2 else a + 9
-            if a < 1 or b < a:
-                raise ValueError
-            dialogs = self.cli.dialogs_cache[a - 1:b]
+            if len(parts) == 1:
+                self.cli.dialogs_cache = await self.facade.list_dialogs()
+                print("[*] Список чатов обновлён.")
+                # self.dialogs = self.cli.dialogs_cache
+                dialogs = self.cli.dialogs_cache[:10]
+            else:
+                a = int(parts[1]) if len(parts) > 1 else 1
+                b = int(parts[2]) if len(parts) > 2 else a + 9
+                if a < 1 or b < a:
+                    raise ValueError
+                dialogs = self.cli.dialogs_cache[a - 1:b]
 
             if not dialogs:
                 print("[*] Нет чатов в этом диапазоне.")
@@ -113,11 +100,11 @@ class MainMenuState(BaseState):
                 for i, d in enumerate(dialogs, start=1):
                     print(f"{i}: {d.name}")
         except ValueError:
-            print("[!] Неверный формат. Используйте: /list или /list a b")
+            print("[!] Неверный формат.")
         except Exception as e:
             print(f"[!] Ошибка при получении чатов: {e}")
 
-    @command("enter", description="Войти в чат по номеру из списка")
+    @command("/enter", description="Войти в чат по номеру из списка")
     async def cmd_enter(self, command):
         parts = command.split()
         try:
@@ -127,56 +114,52 @@ class MainMenuState(BaseState):
         except (IndexError, ValueError, AttributeError):
             print("[!] Неверный индекс. Используйте list сначала.")
 
-    async def handle_command(self, command: str):
-        if command.startswith("/enter_name "):
-            name_query = command[len("enter_name "):].strip().lower()
+    @command("/enter_name", description="Войти в чат по названию чата или его части")
+    async def cmd_enter_name(self, command):
+        name_query = command[len("/enter_name "):].strip().lower()
 
-            matching = [
-                d for d in self.cli.dialogs_cache
-                if name_query in d.name.lower()
-            ]
+        matching = [
+            d for d in self.cli.dialogs_cache
+            if name_query in d.name.lower()
+        ]
 
-            if not matching:
-                print("[!] Чат с таким именем не найден.")
-            elif len(matching) == 1:
-                await self.cli.change_state(ChatState, matching[0])
-            else:
-                print("[*] Найдено несколько чатов:")
-                for i, d in enumerate(matching):
-                    print(f"  {i + 1}: {d.name}")
-                print("Уточните название.")
-
-        elif command.startswith("/enter_phone "):
-            fragment = command[len("/enter_phone "):].strip().replace(" ", "").lstrip('+')
-
-            try:
-                matches = []
-                for d in self.cli.dialogs_cache:
-                    if hasattr(d.entity, 'phone') and d.entity.phone:
-                        if fragment in d.entity.phone:
-                            matches.append(d)
-
-                if not matches:
-                    print("[!] Пользователи с таким номером не найдены.")
-                elif len(matches) == 1:
-                    await self.cli.change_state(ChatState, matches[0])
-                else:
-                    print("[*] Найдено несколько пользователей:")
-                    for i, d in enumerate(matches):
-                        print(f"  {i + 1}: {d.name} (+{d.entity.phone})")
-                    print("Пожалуйста, уточните номер.")
-            except Exception as e:
-                print(f"[!] Ошибка при поиске: {e}")
-
-        elif command == "/logout":
-            await self.facade.logout()
-            await self.cli.change_state(UnauthenticatedState)
-
-        elif command == "/exit":
-            raise SystemExit
-
+        if not matching:
+            print("[!] Чат с таким именем не найден.")
+        elif len(matching) == 1:
+            await self.cli.change_state(ChatState, matching[0])
         else:
-            print("[?] Неизвестная команда. Используйте: list, enter, logout, exit")
+            print("[*] Найдено несколько чатов:")
+            for i, d in enumerate(matching):
+                print(f"  {i + 1}: {d.name}")
+            print("Уточните название.")
+
+    @command("/enter_phone", description="Войти в чат по номеру телефона")
+    async def cmd_enter_phone(self, command):
+        fragment = command[len("/enter_phone "):].strip().replace(" ", "").lstrip('+')
+
+        try:
+            matches = []
+            for d in self.cli.dialogs_cache:
+                if hasattr(d.entity, 'phone') and d.entity.phone:
+                    if fragment in d.entity.phone:
+                        matches.append(d)
+
+            if not matches:
+                print("[!] Пользователи с таким номером не найдены.")
+            elif len(matches) == 1:
+                await self.cli.change_state(ChatState, matches[0])
+            else:
+                print("[*] Найдено несколько пользователей:")
+                for i, d in enumerate(matches):
+                    print(f"  {i + 1}: {d.name} (+{d.entity.phone})")
+                print("Пожалуйста, уточните номер.")
+        except Exception as e:
+            print(f"[!] Ошибка при поиске: {e}")
+
+    @command("/logout", description="Выйти из аккаунта Telegram")
+    async def cmd_logout(self, _):
+        await self.facade.logout()
+        await self.cli.change_state(UnauthenticatedState)
 
 
 class ChatState(BaseState):
@@ -185,23 +168,16 @@ class ChatState(BaseState):
         self.dialog = dialog
         self.handler = None
 
-    commands = {
-        "/send ": "Отправить сообщение",
-        "/back ": "Вернуться в главное меню",
-        "/exit ": "Выйти из клиента",
-        "/help ": "Показать команды чата"
-    }
-
     async def enter(self):
         print(f"=== Чат: {self.dialog.name} ===")
-        print("Команды: /send <сообщение>, /back, /exit")
+        print("[*] Для вывода списка доступных команд введите /help")
 
         # Показ последних сообщений
         messages = await self.facade.get_messages(self.dialog.entity, limit=10)
         for m in reversed(messages):
             print(f"[{m.sender_id}] {m.text}")
 
-        # Установим обработчик новых сообщений
+        # Обработчик новых сообщений
         self.handler = self._create_handler()
         self.facade.client.add_event_handler(self.handler)
 
@@ -213,18 +189,13 @@ class ChatState(BaseState):
             print(f"\n[new] {name}: {event.message.message}")
         return handler
 
-    async def handle_command(self, command: str):
-        if command.startswith("/send "):
-            msg = command[len("send "):]
-            await self.facade.send_message(self.dialog.entity, msg)
+    @command("/send", description="Отправить сообщение в чат")
+    async def cmd_send(self, command):
+        text = command[len("/send "):].strip()
+        if text:
+            await self.facade.send_message(self.dialog.entity, text)
 
-        elif command == "/back":
-            self.facade.client.remove_event_handler(self.handler)
-            await self.cli.change_state(MainMenuState)
-
-        elif command == "/exit":
-            self.facade.client.remove_event_handler(self.handler)
-            raise SystemExit
-
-        else:
-            print("[?] Команды: /send <текст>, /back, /exit")
+    @command("/back", description="Вернуться в главное меню")
+    async def cmd_back(self, _):
+        self.facade.client.remove_event_handler(self.handler)
+        await self.cli.change_state(MainMenuState)
