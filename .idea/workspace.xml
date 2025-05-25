@@ -5,18 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dfb5a626-b64b-4933-b3a1-0ceb92cb2f1f" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/states/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/states/base.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/states/chat.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/states/main_menu.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/states/unauthenticated.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/printers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/cli.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client_facade.py" beforeDir="false" afterPath="$PROJECT_DIR$/client_facade.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/states.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/states/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/states/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/states/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/states/chat.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/states/main_menu.py" beforeDir="false" afterPath="$PROJECT_DIR$/states/main_menu.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/states/unauthenticated.py" beforeDir="false" afterPath="$PROJECT_DIR$/states/unauthenticated.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.session" beforeDir="false" afterPath="$PROJECT_DIR$/test.session" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/printers.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/printers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

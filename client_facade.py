@@ -84,15 +84,15 @@ class ClientFacade:
 
         for d in dialogs:
             entity = d.entity
-            if isinstance(entity, User):
+            if d.is_user:
                 dialog_type = "Private"
                 name = f"{entity.first_name or ''} {entity.last_name or ''}".strip()
                 participants = None
-            elif isinstance(entity, Chat):
+            elif d.is_group:
                 dialog_type = "Chat"
                 name = entity.title
                 participants = getattr(entity, "participants_count", None)
-            elif isinstance(entity, Channel):
+            elif d.is_channel:
                 dialog_type = "Channel"
                 name = entity.title
                 participants = getattr(entity, "participants_count", None)
@@ -103,7 +103,8 @@ class ClientFacade:
                 "ID": entity.id,
                 "Name": name,
                 "Type": dialog_type,
-                "Participants": participants
+                "Participants": participants,
+                "Dialog": d
             })
 
         return pd.DataFrame(data)

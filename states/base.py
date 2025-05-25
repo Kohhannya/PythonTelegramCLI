@@ -1,5 +1,7 @@
 from abc import ABC
 
+import pandas as pd
+
 from utils.printers import UserPrinter
 
 def command(name, description=None):
@@ -15,7 +17,7 @@ class BaseState(ABC):
         self.facade = cli.client_facade
         self.commands = {}
         self.command_descriptions = {}
-        self.dialogs = []
+        self.dialogs = pd.DataFrame() # Маленький кэш последнего запроса
 
         for attr in dir(self):
             method = getattr(self, attr)

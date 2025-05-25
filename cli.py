@@ -1,4 +1,7 @@
 import asyncio
+
+import pandas as pd
+
 from client_facade import ClientFacade
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
@@ -10,8 +13,14 @@ class TelegramCLI:
     def __init__(self):
         self.client_facade = ClientFacade()
         self.state = UnauthenticatedState(self)
-        self.dialogs_cache = [] # Кэшированный список диалогов
+        self.dialogs_cache = pd.DataFrame() # Кэшированный dataframe диалогов
         self.session = PromptSession()
+
+    def get_dialogs_cache(self):
+        return self.dialogs_cache.copy()
+
+    def set_dialogs_cache(self, dialogs_df):
+        self.dialogs_cache = dialogs_df
 
     async def start(self):
         await self.state.enter()

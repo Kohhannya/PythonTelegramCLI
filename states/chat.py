@@ -17,7 +17,8 @@ class ChatState(BaseState):
         messages = await self.facade.get_messages(self.dialog.entity, limit=10)
         for m in reversed(messages):
             sender = await m.get_sender()
-            print(f"[{sender.first_name:^16}] {m.text}")
+            name = sender.first_name if sender else "?"
+            print(f"[{name:^12}] {m.text}")
 
         # Обработчик новых сообщений
         self.handler = self._create_handler()
@@ -33,7 +34,7 @@ class ChatState(BaseState):
         async def handler(event):
             sender = await event.get_sender()
             name = sender.first_name if sender else "?"
-            print(f"\n[new] {name}: {event.message.message}")
+            print(f"\n[new] [{name:^12}]: {event.message.message}")
         return handler
 
     @command("/send", description="Отправить сообщение в чат")
