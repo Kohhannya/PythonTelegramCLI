@@ -1,8 +1,8 @@
 import asyncio
 from client_facade import ClientFacade
-from states import UnauthenticatedState
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
+from states import UnauthenticatedState
 
 # Асинхронный CLI
 

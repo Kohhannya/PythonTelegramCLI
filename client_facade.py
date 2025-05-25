@@ -1,5 +1,8 @@
 import os
 from telethon import TelegramClient
+import pandas as pd
+from telethon.tl.types import User, Chat, Channel
+
 from config import API_ID, API_HASH
 from telethon.errors import (
     PhoneNumberInvalidError,
@@ -60,7 +63,7 @@ class ClientFacade:
     def get_me(self):
         return self.me
 
-    async def list_dialogs(self):
+    async def get_dialogs_list(self):
         return await self.client.get_dialogs()
 
     async def get_messages(self, chat_entity, limit=20):
@@ -68,3 +71,39 @@ class ClientFacade:
 
     async def send_message(self, chat_entity, text):
         await self.client.send_message(chat_entity, text)
+
+    async def get_user_by_id(self, user_id):
+        try:
+            return await self.client.get_entity(user_id)
+        except Exception:
+            return None
+
+    async def get_dialogs_df(self):
+        dialogs = await self.client.get_dialogs()
+        data = []
+
+        for d in dialogs:
+            entity = d.entity
+            if isinstance(entity, User):
+                dialog_type = "Private"
+                name = f"{entity.first_name or ''} {entity.last_name or ''}".strip()
+                participants = None
+            elif isinstance(entity, Chat):
+                dialog_type = "Chat"
+                name = entity.title
+                participants = getattr(entity, "participants_count", None)
+            elif isinstance(entity, Channel):
+                dialog_type = "Channel"
+                name = entity.title
+                participants = getattr(entity, "participants_count", None)
+            else:
+                continue
+
+            data.append({
+                "ID": entity.id,
+                "Name": name,
+                "Type": dialog_type,
+                "Participants": participants
+            })
+
+        return pd.DataFrame(data)
