@@ -48,15 +48,34 @@ class BaseState(ABC):
     async def cmd_exit(self, _):
         raise SystemExit
 
-    @command("/info_me", description="показать информацию о себе")
+    def find_dialogs(self, query):
+        df = self.cli.get_dialogs_cache()
+
+        def match(dialog):
+            if dialog is None or not hasattr(dialog, 'entity'):
+                return False
+            entity = dialog.entity
+            phone = getattr(entity, 'phone', '') or ''
+            first = getattr(entity, 'first_name', '') or ''
+            last = getattr(entity, 'last_name', '') or ''
+            username = getattr(entity, 'username', '') or ''
+            name = f"{first} {last}".strip()
+            return query in phone.lower() or query in name.lower() or query in username.lower()
+        try:
+            return df[df["Dialog"].apply(match)].reset_index(drop=True)
+        except Exception as e:
+            print(f"[!] Ошибка при поиске: {e}")
+            return None
+
+    @command("/info_me", description="Показать информацию о себе")
     async def cmd_info_me(self, _):
         UserPrinter.print_user(self.facade.get_me(), title="Профиль")
 
-    @command("/info_user", description="информация о пользователе по ID")
-    async def cmd_info_user(self, command):
+    @command("/info_user_by_id", description="Информация о пользователе по ID")
+    async def cmd_info_user_by_id(self, command):
         parts = command.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            print("[!] Использование: /info_user <id>")
+            print("[!] Использование: /info_user_by_id <id>")
             return
 
         user = await self.facade.get_user_by_id(int(parts[1]))
@@ -64,3 +83,17 @@ class BaseState(ABC):
             UserPrinter.print_user(user)
         else:
             print("[!] Пользователь не найден.")
+
+    @command("/info_user", description="Вывод информации о пользователе по номеру из списка")
+    async def cmd_info_user(self, command):
+        parts = command.split()
+        try:
+            index = int(parts[1]) - 1
+            dialog_row = self.dialogs.iloc[index]
+            dialog = dialog_row["Dialog"]
+            if not dialog.is_user:
+                print("[!] Не является пользователем.")
+            else:
+                UserPrinter.print_user(dialog.entity)
+        except (IndexError, ValueError, AttributeError):
+            print("[!] Неверный индекс.")

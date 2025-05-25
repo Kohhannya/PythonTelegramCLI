@@ -34,14 +34,14 @@ class MainMenuState(BaseState):
             return
         try:
             if len(parts) == 1:
-                df = df.iloc[0:10]
+                df = df.iloc[0:10].reset_index(drop=True)
                 title = "Первые 10 чатов"
             else:
                 a = int(parts[1]) if len(parts) > 1 else 1
                 b = int(parts[2]) if len(parts) > 2 else a + 9
                 if a < 1 or b < a:
                     raise ValueError
-                df = df.iloc[a - 1:b]
+                df = df.iloc[a - 1:b].reset_index(drop=True)
                 title = f"Чаты {a}-{b}"
 
             self.dialogs = df
@@ -67,69 +67,33 @@ class MainMenuState(BaseState):
     async def cmd_enter_name(self, command):
         from .chat import ChatState
         name_query = command[len("/enter_name "):].strip().lower()
+        matches = self.find_dialogs(name_query)
+
+        if matches.empty:
+            print("[!] Чат с похожим именем не найден.")
+        elif len(matches) == 1:
+            await self.cli.change_state(ChatState, matches.iloc[0]["Dialog"])
+        else:
+            DialogsPrinter.print(matches, title=f"Чаты по имени '{name_query}'")
+            print("[*] Уточните название или используйте /enter <номер>")
+        self.dialogs = matches
+
+    @command("/search", description="Поиск чата по части имени или номеру телефона")
+    async def cmd_search(self, command):
+        query = command[len("/search "):].strip().lower()
+
+        if not query:
+            print("[!] Использование: /search <строка>")
+            return
         df = self.cli.get_dialogs_cache()
+        matches = self.find_dialogs(query)
 
-        try:
-            matches = df[df["Name"].str.lower().str.contains(name_query, na=False)].reset_index(drop=True)
-
-            if matches.empty:
-                print("[!] Чат с похожим именем не найден.")
-            elif len(matches) == 1:
-                await self.cli.change_state(ChatState, matches.iloc[0]["Dialog"])
-            else:
-                DialogsPrinter.print(matches, title=f"Чаты по имени '{name_query}'", show_type=True)
-                print("[*] Уточните название или используйте /enter <номер>")
-            self.dialogs = matches
-        except Exception as e:
-            print(f"[!] Ошибка при поиске: {e}")
-
-    @command("/enter_phone", description="Войти в чат по номеру телефона")
-    async def cmd_enter_phone(self, command):
-        from .chat import ChatState
-        phone_query = command[len("/enter_phone "):].strip().lstrip('+')
-        df = self.cli.get_dialogs_cache()
-
-        def phone_match(dialog):
-            entity = dialog.entity
-            return hasattr(entity, 'phone') and phone_query in str(entity.phone)
-
-        try:
-            matches = df[df["Dialog"].apply(phone_match)].reset_index(drop=True)
-
-            if matches.empty:
-                print("[!] Пользователь с таким номером не найден.")
-            elif len(matches) == 1:
-                await self.cli.change_state(ChatState, matches.iloc[0]["Dialog"])
-            else:
-                DialogsPrinter.print(matches, title=f"Чаты по номеру '{phone_query}'")
-                print("[*] Уточните номер или используйте /enter <номер>")
-            self.dialogs = matches
-        except Exception as e:
-            print(f"[!] Ошибка при поиске: {e}")
-
-    @command("/enter_phone", description="Войти в чат по номеру телефона")
-    async def cmd_enter_phone(self, command):
-        from .chat import ChatState
-        phone_query = command[len("/enter_phone "):].strip().lstrip('+')
-        df = self.cli.get_dialogs_cache()
-
-        def phone_match(dialog):
-            entity = dialog.entity
-            return hasattr(entity, 'phone') and phone_query in str(entity.phone)
-
-        try:
-            matches = df[df["Dialog"].apply(phone_match)].reset_index(drop=True)
-
-            if matches.empty:
-                print("[!] Пользователь с таким номером не найден.")
-            elif len(matches) == 1:
-                await self.cli.change_state(ChatState, matches.iloc[0]["Dialog"])
-            else:
-                DialogsPrinter.print(matches, title=f"Чаты по номеру '{phone_query}'")
-                print("[*] Уточните номер или используйте /enter <номер>")
-            self.dialogs = matches
-        except Exception as e:
-            print(f"[!] Ошибка при поиске: {e}")
+        if matches.empty:
+            print("[!] Ничего не найдено.")
+        else:
+            DialogsPrinter.print(matches, title=f"Результаты поиска '{query}'")
+            print("[*] Используйте /enter <номер> для входа в чат")
+        self.dialogs = matches
 
     @command("/logout", description="Выйти из аккаунта Telegram")
     async def cmd_logout(self, _):
