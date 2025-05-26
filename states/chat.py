@@ -1,3 +1,4 @@
+from utils.printers import MessagesPrinter
 from .base import BaseState, command
 from .main_menu import MainMenuState
 from telethon import events
@@ -15,10 +16,7 @@ class ChatState(BaseState):
 
         # Показ последних сообщений
         messages = await self.facade.get_messages(self.dialog.entity, limit=10)
-        for m in reversed(messages):
-            sender = await m.get_sender()
-            name = sender.first_name if sender else "?"
-            print(f"[{name:^12}] {m.text}")
+        MessagesPrinter.print_last_messages(messages)
 
         # Обработчик новых сообщений
         self.handler = self._create_handler()
@@ -32,9 +30,7 @@ class ChatState(BaseState):
     def _create_handler(self):
         @events.register(events.NewMessage(chats=self.dialog.entity))
         async def handler(event):
-            sender = await event.get_sender()
-            name = sender.first_name if sender else "?"
-            print(f"\n[new] [{name:^12}]: {event.message.message}")
+            MessagesPrinter.print_new(event.message)
         return handler
 
     @command("/send", description="Отправить сообщение в чат")

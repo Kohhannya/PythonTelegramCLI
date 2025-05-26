@@ -1,5 +1,3 @@
-import pandas as pd
-
 from utils.printers import DialogsPrinter
 from .base import BaseState, command
 from .unauthenticated import UnauthenticatedState
@@ -18,6 +16,9 @@ class MainMenuState(BaseState):
         try:
             # Обновляем dataframe диалогов
             self.cli.set_dialogs_cache(await self.facade.get_dialogs_df())
+            # Обновляем файл сохранения
+            # self.cli.save_dialogs_cache()
+
             self.dialogs = self.cli.get_dialogs_cache()
             print("[*] Список чатов обновлён.")
         except Exception as e:

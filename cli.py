@@ -1,5 +1,3 @@
-import asyncio
-
 import pandas as pd
 
 from client_facade import ClientFacade

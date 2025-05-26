@@ -7,7 +7,8 @@ class UnauthenticatedState(BaseState):
         if connected:
             print(f"[*] Авторизованы как: {self.facade.get_me().first_name}")
 
-            # Кэшируем актуальный список чатов в виде DataFrame-поле клиента
+            # Загружаем кэш диалогов из файла
+            # await self.cli.load_dialogs_cache()
             self.cli.set_dialogs_cache(await self.facade.get_dialogs_df())
 
             from .main_menu import MainMenuState
@@ -23,7 +24,10 @@ class UnauthenticatedState(BaseState):
             if success:
                 print(f"[*] Авторизованы как: {self.facade.get_me().first_name}")
 
+                # Кэшируем актуальный список чатов в виде DataFrame-поле клиента
                 self.cli.set_dialogs_cache(await self.facade.get_dialogs_df())
+                # Сохраняем его в файл
+                # self.cli.save_dialogs_cache()
 
                 from .main_menu import MainMenuState
                 await self.cli.change_state(MainMenuState)
